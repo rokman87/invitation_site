@@ -9,7 +9,9 @@
     --text-light: #ffffff;
     --background-light: #f3f5f2;
     --shadow-color: rgba(0, 0, 0, 0.1);
-
+    --acsent-color: #efec3a;
+    --acsent-color2: #715a1f;
+    --acsent-color-light: #b09967;
     /* Шрифты */
     --heading-font: 'Marck Script', cursive;
     --body-font: "Times New Roman", Monospaced, serif;
@@ -177,6 +179,7 @@
 .calendar-image {
     margin-top: 20px;
     width: 80%;
+    border: 1px solid var(--acsent-color2);
 }
 
 .guest-message {
@@ -243,7 +246,7 @@
 
 .hint {
     background-color: rgba(255, 255, 255, 0.4);
-    border: 2px solid var(--text-light);
+    border: 2px solid var(--acsent-color2);
     border-radius: 10px;
     padding: 15px;
     color: black;
