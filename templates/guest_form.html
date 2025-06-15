@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анкета гостя</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .important {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .checkbox-group {
+            margin-top: 10px;
+        }
+        .checkbox-item {
+            margin-bottom: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2 class="form-title">АНКЕТА ГОСТЯ</h2>
+        <p>Будем очень признательны, если Вы сообщите нам о своём решении до 16.10.2025</p>
+
+        <p class="important">Важно! Анкета заполняется индивидуально для каждого гостя</p>
+
+        <form action="/submit-guest-form" method="post">
+            <div class="form-group">
+                <label for="name"><strong>Ваше Имя и Фамилия</strong></label>
+                <input type="text" id="name" name="name" required style="width: 100%; padding: 8px;">
+            </div>
+
+            <hr>
+
+            <div class="form-group">
+                <p>Планируете ли присутствовать?</p>
+                <label>
+                    <input type="radio" name="attendance" value="yes" required> Я с удовольствием приду
+                </label><br>
+                <label>
+                    <input type="radio" name="attendance" value="no"> К сожалению, не смогу
+                </label>
+            </div>
+
+            <div class="form-group">
+                <p>Буду пить на банкете</p>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" name="drinks" value="vodka"> Водка
+                        </label>
+                    </div>
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" name="drinks" value="cognac"> Коньяк
+                        </label>
+                    </div>
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" name="drinks" value="wine"> Вино
+                        </label>
+                    </div>
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" name="drinks" value="champagne"> Шампанское
+                        </label>
+                    </div>
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" name="drinks" value="no_alcohol"> Не буду пить алкоголь
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit">Отправить</button>
+        </form>
+    </div>
+</body>
+</html>
