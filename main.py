@@ -11,6 +11,7 @@ from schemas import GuestCreate, Guest, GuestsResponse
 from database import SessionLocal, init_db
 from typing import List, Dict
 from collections import defaultdict
+from fastapi import Query
 # Инициализация приложения
 app = FastAPI(title="Wedding Invitation", version="1.0")
 
