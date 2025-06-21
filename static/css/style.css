@@ -251,7 +251,7 @@
     width: calc(25% - 20px);
     box-shadow: 0 4px 8px var(--shadow-color);
     box-sizing: border-box;
-    text-shadow: 0px 1px var(--text-light);
+    /*text-shadow: 0px 1px var(--text-light);*/
 }
 
 .place-section {
