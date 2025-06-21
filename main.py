@@ -1,16 +1,16 @@
-from typing import List
 from datetime import datetime
 from fastapi import FastAPI, Request, Depends, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.responses import RedirectResponse, HTMLResponse
+from starlette.responses import RedirectResponse, HTMLResponse, JSONResponse
 from starlette.status import HTTP_303_SEE_OTHER
 from models import GuestDB
-from schemas import GuestCreate, Guest
+from schemas import GuestCreate, Guest, GuestsResponse
 from database import SessionLocal, init_db
-
+from typing import List, Dict
+from collections import defaultdict
 # Инициализация приложения
 app = FastAPI(title="Wedding Invitation", version="1.0")
 
@@ -80,10 +80,54 @@ def create_guest(guest: GuestCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/api/guests/", response_model=List[Guest])
+
+# Модифицируем существующий endpoint /api/guests/
+@app.get("/api/guests/", response_model=GuestsWithSummaryResponse)
 def read_guests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     guests = db.query(GuestDB).offset(skip).limit(limit).all()
-    return guests
+
+    # Подсчет алкогольных предпочтений
+    drinks_counter = defaultdict(int)
+    total_count = 0
+
+    for guest in guests:
+        total_count += 1
+        if guest.drinks:
+            for drink in guest.drinks.split(','):
+                drinks_counter[drink.strip()] += 1
+
+    return {
+        "guests": guests,
+        "total_count": total_count,
+        "drinks_summary": dict(drinks_counter)
+    }
+
+
+# Добавим новый endpoint только для summary (опционально)
+@app.get("/api/guests/summary/")
+def get_guests_summary(db: Session = Depends(get_db)):
+    guests = db.query(GuestDB).all()
+
+    drinks_counter = defaultdict(int)
+    attending_count = 0
+    total_count = len(guests)
+
+    for guest in guests:
+        if guest.will_attend:
+            attending_count += 1
+        if guest.drinks:
+            for drink in guest.drinks.split(','):
+                drinks_counter[drink.strip()] += 1
+
+    return JSONResponse({
+        "total_guests": total_count,
+        "attending_guests": attending_count,
+        "drinks_summary": dict(drinks_counter)
+    })
+
+@app.get("/guests", response_class=HTMLResponse)
+async def view_guests(request: Request, db: Session = Depends(get_db)):
+    return templates.TemplateResponse("guests.html", {"request": request})
 
 if __name__ == "__main__":
     import uvicorn

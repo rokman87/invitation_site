@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 from pydantic import BaseModel, field_validator
 
@@ -24,3 +24,9 @@ class Guest(GuestBase):
 
     class Config:
         from_attributes = True
+
+
+class GuestsResponse(BaseModel):
+    guests: List[Guest]
+    total_count: int
+    drinks_summary: Dict[str, int]
