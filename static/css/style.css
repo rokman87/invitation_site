@@ -256,7 +256,7 @@
 }
 
 .place-section {
-    background-color: var(--background-light);
+    background-color: var(--primary-light);
     border: 2px solid var(--text-dark);
 }
 
