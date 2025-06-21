@@ -7,17 +7,21 @@ from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse, HTMLResponse
 from starlette.status import HTTP_303_SEE_OTHER
-from models import GuestDB, GuestCreate, Guest
-from database import SessionLocal, engine, Base
+from models import GuestDB
+from schemas import GuestCreate, Guest
+from database import SessionLocal, init_db
 
+# Инициализация приложения
 app = FastAPI(title="Wedding Invitation", version="1.0")
 
-# Инициализация БД
-Base.metadata.create_all(bind=engine)
+# Инициализация БД (вызывается только при первом запуске)
+init_db()
 
+# Настройка статических файлов и шаблонов
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Настройка CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,6 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Dependency для получения сессии БД
 def get_db():
     db = SessionLocal()
     try:
@@ -33,6 +38,7 @@ def get_db():
     finally:
         db.close()
 
+# Роуты
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -64,12 +70,12 @@ def create_guest(guest: GuestCreate, db: Session = Depends(get_db)):
         db_guest = GuestDB(
             name=guest.name,
             will_attend=guest.will_attend,
-            drinks=",".join(guest.drinks) if guest.drinks else None
+            drinks=",".join(guest.drinks) if guest.drinks and len(guest.drinks) > 0 else None
         )
         db.add(db_guest)
         db.commit()
         db.refresh(db_guest)
-        return Guest.model_validate(db_guest)  # Используем новый метод валидации
+        return db_guest
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -77,9 +83,8 @@ def create_guest(guest: GuestCreate, db: Session = Depends(get_db)):
 @app.get("/api/guests/", response_model=List[Guest])
 def read_guests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     guests = db.query(GuestDB).offset(skip).limit(limit).all()
-    return [Guest.model_validate(guest) for guest in guests]  # Обновленный метод валидации
+    return guests
 
 if __name__ == "__main__":
     import uvicorn
-    # Изменяем способ запуска для поддержки reload
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
