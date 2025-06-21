@@ -4,7 +4,7 @@
     /* Цветовая палитра */
     --primary-color: #80997e;
     --primary-dark: #6a8267;
-    --primary-light: rgba(128, 153, 126, 0.2);
+    --primary-light: rgba(128, 153, 126, 0.5);
     --text-dark: #314E28;
     --text-light: #ffffff;
     --background-light: #f3f5f2;
