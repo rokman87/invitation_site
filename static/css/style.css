@@ -202,7 +202,6 @@
 
 .hints-section {
     text-align: center;
-    text-shadow: 0px 1px var(--text-light);
     margin-top: -25px;
     padding: 20px;
     color: var(--text-light);
@@ -246,7 +245,8 @@
 }
 
 .hint {
-    background-color: rgba(255, 255, 255, 0.4);
+    /*background-color: rgba(255, 255, 255, 0.4);*/
+    background-color:rgba(128, 153, 126, 0.5);
     border: 2px solid var(--acsent-color2);
     border-radius: 10px;
     padding: 15px;
@@ -254,6 +254,7 @@
     width: calc(25% - 20px);
     box-shadow: 0 4px 8px var(--shadow-color);
     box-sizing: border-box;
+    text-shadow: 0px 1px var(--text-light);
 }
 
 .place-section {
@@ -280,6 +281,7 @@ iframe {
     border: solid 2px #485c47;
     margin: 0 auto;
     display: block;
+    width: 90%;
 }
 
 /* Стили для фиксированной кнопки звука */
