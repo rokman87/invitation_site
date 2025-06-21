@@ -265,11 +265,13 @@
 .place-section {
     background-color: var(--primary-light);
     border: 2px solid var(--text-dark);
+    font-family: 'Playfair Display', serif;
 }
 
 .place-header {
     padding: 8px;
     text-align: center;
+    font-family: 'Playfair Display', serif;
 }
 
 .place-image {
