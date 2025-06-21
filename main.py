@@ -82,7 +82,7 @@ def create_guest(guest: GuestCreate, db: Session = Depends(get_db)):
 
 
 # Модифицируем существующий endpoint /api/guests/
-@app.get("/api/guests/", response_model=GuestsWithSummaryResponse)
+@app.get("/api/guests/", response_model=GuestsResponse)
 def read_guests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     guests = db.query(GuestDB).offset(skip).limit(limit).all()
 
