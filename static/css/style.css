@@ -267,11 +267,19 @@
 }
 
 .place-image {
-    width: 100%;
+    width: 95%;
     height: 100%;
     object-fit: cover;
     object-position: center;
     border: solid 2px #485c47;
+    display: block;
+    margin: 10px auto;
+}
+
+iframe {
+    border: solid 2px #485c47;
+    margin: 0 auto;
+    display: block;
 }
 
 /* Стили для фиксированной кнопки звука */
