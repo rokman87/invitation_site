@@ -129,6 +129,38 @@ def get_guests_summary(db: Session = Depends(get_db)):
 async def view_guests(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("guests.html", {"request": request})
 
+
+@app.get("/view-guests", response_class=HTMLResponse)
+async def view_guests(
+        request: Request,
+        attendance: str = Query(None),
+        drink: str = Query(None),
+        db: Session = Depends(get_db)
+):
+    query = db.query(GuestDB)
+
+    # Фильтрация по посещению
+    if attendance == "yes":
+        query = query.filter(GuestDB.will_attend == True)
+    elif attendance == "no":
+        query = query.filter(GuestDB.will_attend == False)
+
+    # Фильтрация по напиткам
+    if drink:
+        query = query.filter(GuestDB.drinks.contains(drink))
+
+    guests = query.order_by(GuestDB.created_at.desc()).all()
+
+    return templates.TemplateResponse(
+        "guests_view.html",
+        {
+            "request": request,
+            "guests": guests,
+            "attendance_filter": attendance,
+            "drink_filter": drink
+        }
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

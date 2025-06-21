@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Просмотр гостей</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        .attending-yes { color: green; font-weight: bold; }
+        .attending-no { color: red; font-weight: bold; }
+        .drink-badge { margin-right: 4px; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Список всех гостей</h1>
+
+        <!-- Фильтры -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Статус посещения</label>
+                        <select name="attendance" class="form-select">
+                            <option value="">Все</option>
+                            <option value="yes" {% if attendance_filter == 'yes' %}selected{% endif %}>Придут</option>
+                            <option value="no" {% if attendance_filter == 'no' %}selected{% endif %}>Не придут</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Напиток</label>
+                        <select name="drink" class="form-select">
+                            <option value="">Все</option>
+                            <option value="vodka" {% if drink_filter == 'vodka' %}selected{% endif %}>Водка</option>
+                            <option value="cognac" {% if drink_filter == 'cognac' %}selected{% endif %}>Коньяк</option>
+                            <option value="wine" {% if drink_filter == 'wine' %}selected{% endif %}>Вино</option>
+                            <option value="champagne" {% if drink_filter == 'champagne' %}selected{% endif %}>Шампанское</option>
+                            <option value="no_alcohol" {% if drink_filter == 'no_alcohol' %}selected{% endif %}>Без алкоголя</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Фильтровать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Таблица гостей -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="guestsTable" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Статус</th>
+                                <th>Напитки</th>
+                                <th>Дата ответа</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for guest in guests %}
+                            <tr>
+                                <td>{{ guest.name }}</td>
+                                <td>
+                                    <span class="{% if guest.will_attend %}attending-yes{% else %}attending-no{% endif %}">
+                                        {% if guest.will_attend %}Придёт{% else %}Не придёт{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if guest.drinks %}
+                                        {% for drink in guest.drinks.split(',') %}
+                                            {% if drink == 'vodka' %}
+                                                <span class="badge bg-secondary drink-badge">Водка</span>
+                                            {% elif drink == 'cognac' %}
+                                                <span class="badge bg-secondary drink-badge">Коньяк</span>
+                                            {% elif drink == 'wine' %}
+                                                <span class="badge bg-secondary drink-badge">Вино</span>
+                                            {% elif drink == 'champagne' %}
+                                                <span class="badge bg-secondary drink-badge">Шампанское</span>
+                                            {% elif drink == 'no_alcohol' %}
+                                                <span class="badge bg-info drink-badge">Без алкоголя</span>
+                                            {% else %}
+                                                <span class="badge bg-light text-dark drink-badge">{{ drink }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">Не указано</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ guest.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#guestsTable').DataTable({
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/ru.json'
+                },
+                order: [[3, 'desc']] // Сортировка по дате по убыванию
+            });
+        });
+    </script>
+</body>
+</html>
