@@ -10,11 +10,16 @@
         .attending-yes { color: green; font-weight: bold; }
         .attending-no { color: red; font-weight: bold; }
         .drink-badge { margin-right: 4px; margin-bottom: 4px; }
+        .action-buttons { white-space: nowrap; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1100; }
     </style>
 </head>
 <body>
     <div class="container mt-4">
-        <h1 class="mb-4">Список всех гостей</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Список всех гостей</h1>
+            <a href="/guests" class="btn btn-secondary">Назад</a><a href="/logout" class="btn btn-outline-danger ms-2">Выйти</a>
+        </div>
 
         <!-- Фильтры -->
         <div class="card mb-4">
@@ -57,11 +62,12 @@
                                 <th>Статус</th>
                                 <th>Напитки</th>
                                 <th>Дата ответа</th>
+                                <th>Действия</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for guest in guests %}
-                            <tr>
+                            <tr id="guest-{{ guest.id }}">
                                 <td>{{ guest.name }}</td>
                                 <td>
                                     <span class="{% if guest.will_attend %}attending-yes{% else %}attending-no{% endif %}">
@@ -90,6 +96,9 @@
                                     {% endif %}
                                 </td>
                                 <td>{{ guest.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td class="action-buttons">
+                                    <button class="btn btn-danger btn-sm delete-btn" data-guest-id="{{ guest.id }}">Удалить</button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -99,18 +108,111 @@
         </div>
     </div>
 
+    <!-- Modal для подтверждения удаления -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Подтверждение удаления</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Вы уверены, что хотите удалить этого гостя?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast для уведомлений -->
+    <div class="toast-container">
+        <div class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true" id="successToast">
+            <div class="d-flex">
+                <div class="toast-body" id="successToastMessage">
+                    Гость успешно удален
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="toast align-items-center text-white bg-danger" role="alert" aria-live="assertive" aria-atomic="true" id="errorToast">
+            <div class="d-flex">
+                <div class="toast-body" id="errorToastMessage">
+                    Ошибка при удалении гостя
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('#guestsTable').DataTable({
+            // Инициализация таблицы
+            const table = $('#guestsTable').DataTable({
                 language: {
                     url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/ru.json'
                 },
-                order: [[3, 'desc']] // Сортировка по дате по убыванию
+                order: [[3, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: 4 }
+                ]
+            });
+
+            // Инициализация Toast
+            const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+            const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
+
+            let currentGuestId = null;
+            const confirmDeleteModal = new bootstrap.Modal('#confirmDeleteModal');
+
+            // Обработчик клика по кнопке удаления
+            $('#guestsTable').on('click', '.delete-btn', function() {
+                currentGuestId = $(this).data('guest-id');
+                confirmDeleteModal.show();
+            });
+
+            // Подтверждение удаления
+            $('#confirmDeleteBtn').click(function() {
+                if (currentGuestId) {
+                    $.ajax({
+                        url: `/api/guests/${currentGuestId}`,
+                        type: 'DELETE',
+                        xhrFields: {
+                            withCredentials: true
+                        },
+                        success: function(response) {
+                            table.row(`#guest-${currentGuestId}`).remove().draw();
+                            confirmDeleteModal.hide();
+                            $('#successToastMessage').text(response.message || 'Гость успешно удален');
+                            successToast.show();
+                        },
+                        error: function(xhr) {
+                            if (xhr.status === 401) {
+                                window.location.href = '/login';
+                            } else {
+                                let errorMessage = xhr.responseJSON?.detail || 'Неизвестная ошибка';
+                                $('#errorToastMessage').text(`Ошибка: ${errorMessage}`);
+                                errorToast.show();
+                                confirmDeleteModal.hide();
+                            }
+                        }
+                    });
+                }
             });
         });
     </script>
+<script>
+    $(document).ajaxError(function(event, xhr) {
+        if (xhr.status === 401) {
+            window.location.href = '/login';
+        }
+    });
+</script>
 </body>
 </html>

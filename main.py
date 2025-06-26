@@ -1,21 +1,21 @@
 from datetime import datetime
-from fastapi import FastAPI, Request, Depends, Form, HTTPException
+from fastapi import FastAPI, Request, Depends, Form, HTTPException, Response, Cookie
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.responses import RedirectResponse, HTMLResponse, JSONResponse
-from starlette.status import HTTP_303_SEE_OTHER
+from starlette.responses import RedirectResponse, HTMLResponse
+from starlette.status import HTTP_303_SEE_OTHER, HTTP_401_UNAUTHORIZED
 from models import GuestDB
-from schemas import GuestCreate, Guest, GuestsResponse
 from database import SessionLocal, init_db
-from typing import List, Dict
-from collections import defaultdict
-from fastapi import Query
-# Инициализация приложения
+from typing import List, Optional
+from fastapi import Query, status
+import secrets
+import hashlib
+
 app = FastAPI(title="Wedding Invitation", version="1.0")
 
-# Инициализация БД (вызывается только при первом запуске)
+# Инициализация БД
 init_db()
 
 # Настройка статических файлов и шаблонов
@@ -31,7 +31,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency для получения сессии БД
+# Конфигурация аутентификации
+SECRET_KEY = "wedding-secret-key-123"
+SESSION_COOKIE_NAME = "auth_token"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD_HASH = hashlib.sha256("wedding123".encode()).hexdigest()
+
 def get_db():
     db = SessionLocal()
     try:
@@ -39,7 +44,13 @@ def get_db():
     finally:
         db.close()
 
-# Роуты
+def verify_session(auth_token: Optional[str] = Cookie(default=None)):
+    if not auth_token or auth_token != f"valid-{SECRET_KEY}":
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -65,88 +76,59 @@ async def submit_guest_form(
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/guests/", response_model=Guest)
-def create_guest(guest: GuestCreate, db: Session = Depends(get_db)):
-    try:
-        db_guest = GuestDB(
-            name=guest.name,
-            will_attend=guest.will_attend,
-            drinks=",".join(guest.drinks) if guest.drinks and len(guest.drinks) > 0 else None
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, error: Optional[str] = None):
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "error": error}
+    )
+
+@app.post("/login")
+async def do_login(
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    if (secrets.compare_digest(username, ADMIN_USERNAME) and
+        secrets.compare_digest(password_hash, ADMIN_PASSWORD_HASH)):
+        response = RedirectResponse(url="/view-guests", status_code=HTTP_303_SEE_OTHER)
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=f"valid-{SECRET_KEY}",
+            httponly=True,
+            secure=False,  # В продакшене должно быть True
+            samesite="lax"
         )
-        db.add(db_guest)
-        db.commit()
-        db.refresh(db_guest)
-        return db_guest
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        return response
+    else:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": Request, "error": "Неверные учетные данные"},
+            status_code=HTTP_401_UNAUTHORIZED
+        )
 
-
-# Модифицируем существующий endpoint /api/guests/
-@app.get("/api/guests/", response_model=GuestsResponse)
-def read_guests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    guests = db.query(GuestDB).offset(skip).limit(limit).all()
-
-    # Подсчет алкогольных предпочтений
-    drinks_counter = defaultdict(int)
-    total_count = 0
-
-    for guest in guests:
-        total_count += 1
-        if guest.drinks:
-            for drink in guest.drinks.split(','):
-                drinks_counter[drink.strip()] += 1
-
-    return {
-        "guests": guests,
-        "total_count": total_count,
-        "drinks_summary": dict(drinks_counter)
-    }
-
-
-# Добавим новый endpoint только для summary (опционально)
-@app.get("/api/guests/summary/")
-def get_guests_summary(db: Session = Depends(get_db)):
-    guests = db.query(GuestDB).all()
-
-    drinks_counter = defaultdict(int)
-    attending_count = 0
-    total_count = len(guests)
-
-    for guest in guests:
-        if guest.will_attend:
-            attending_count += 1
-        if guest.drinks:
-            for drink in guest.drinks.split(','):
-                drinks_counter[drink.strip()] += 1
-
-    return JSONResponse({
-        "total_guests": total_count,
-        "attending_guests": attending_count,
-        "drinks_summary": dict(drinks_counter)
-    })
-
-@app.get("/guests", response_class=HTMLResponse)
-async def view_guests(request: Request, db: Session = Depends(get_db)):
-    return templates.TemplateResponse("guests.html", {"request": request})
-
+@app.get("/logout")
+async def logout(response: Response):
+    response = RedirectResponse(url="/login")
+    response.delete_cookie(SESSION_COOKIE_NAME)
+    return response
 
 @app.get("/view-guests", response_class=HTMLResponse)
 async def view_guests(
-        request: Request,
-        attendance: str = Query(None),
-        drink: str = Query(None),
-        db: Session = Depends(get_db)
+    request: Request,
+    attendance: str = Query(None),
+    drink: str = Query(None),
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_session)
 ):
     query = db.query(GuestDB)
 
-    # Фильтрация по посещению
     if attendance == "yes":
         query = query.filter(GuestDB.will_attend == True)
     elif attendance == "no":
         query = query.filter(GuestDB.will_attend == False)
 
-    # Фильтрация по напиткам
     if drink:
         query = query.filter(GuestDB.drinks.contains(drink))
 
@@ -158,9 +140,27 @@ async def view_guests(
             "request": request,
             "guests": guests,
             "attendance_filter": attendance,
-            "drink_filter": drink
+            "drink_filter": drink,
         }
     )
+
+@app.delete("/api/guests/{guest_id}")
+def delete_guest(
+    guest_id: int,
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_session)
+):
+    guest = db.query(GuestDB).filter(GuestDB.id == guest_id).first()
+    if not guest:
+        raise HTTPException(status_code=404, detail="Guest not found")
+
+    try:
+        db.delete(guest)
+        db.commit()
+        return {"message": "Guest deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
